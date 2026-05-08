@@ -1,18 +1,23 @@
 # AOCI
 
+[![Spec Version](https://img.shields.io/badge/spec-v1.0-blue)](https://github.com/aoci-spec/aoci)
+[![License](https://img.shields.io/badge/license-CC0-green)](LICENSE)
+[![Paper](https://img.shields.io/badge/paper-arXiv-b31b1b)](https://arxiv.org/abs/2605.02421)
+[![Platform](https://img.shields.io/badge/platform-aoci.ai-purple)](https://aoci.ai)
+
 > **AI-Oriented Code Indexing** — A protocol for compressing repository-scale code into a single structured text artifact that an LLM can ingest in one pass.
 
-🌐 **Languages**: English | [中文](README.zh-CN.md)
-
-[Platform](https://aoci.ai) · [Paper (arXiv)](https://arxiv.org/abs/2605.02421) · [Reproducible artifact (Zenodo)](https://doi.org/10.5281/zenodo.19677251)
+🌐 **Languages**: English · [中文](README.zh-CN.md)
 
 ---
 
-## Overview
+## 📖 Overview
 
 An AOCI index is a plain-text artifact that represents an entire repository through one structured entry per source file or database table. Each entry combines a discrete tag (architectural coordinates) with a continuous semantic description (function, relations, interface, design constraints).
 
-The protocol targets a specific failure mode in LLM-assisted software engineering: degraded reasoning over long, low-entropy contexts. By relocating per-file information into a fixed schema before the task begins, AOCI allows an LLM to localize, reason about, and modify code without runtime exploration.
+The protocol targets a specific failure mode in LLM-assisted software engineering: degraded reasoning over long, low-entropy contexts. By relocating per-file information into a fixed schema before the task begins, AOCI lets an LLM localize, reason about, and modify code without runtime exploration.
+
+A repository of **~100K LOC typically compresses to 600–800 lines of index — a token-compression ratio of approximately 1:100.**
 
 A representative entry:
 
@@ -32,26 +37,28 @@ uuid/username/email unique, password_hash bcrypt,
 status, is_superadmin, preferences JSONB
 ```
 
-A repository of 100K+ LOC typically compresses to 200–400 entries — readable by an LLM in a single forward pass.
+For methodology, evaluation results, and theoretical analysis, see the [paper](https://arxiv.org/abs/2605.02421).
 
-## Empirical results
+---
 
-Benchmarked across 5 production systems, 19 end-to-end development tasks, and 4 projects evaluated against 3 frontier LLMs under 6 context conditions (2,160 evaluations):
+## 🔓 Independent of any toolchain
 
-- **0 final-state defects** with AOCI vs **39 defects** across three agent-based tools (Claude Code, Cursor, OpenCode); Fisher's exact test *p* < 0.001
-- **4–130× lower token consumption**; ratio scales with task complexity
-- **97.67%** file-localization accuracy, 0.66pp below the Oracle upper bound
-- Determinism: identical input produces identical output across runs
+AOCI is a **format specification only**. It does not depend on any specific:
 
-Methodology and full results: [arXiv:2605.02421](https://arxiv.org/abs/2605.02421). Reproduction artifacts: [Zenodo](https://doi.org/10.5281/zenodo.19677251).
+- **LLM model** — works with any model capable of structured generation
+- **Agent tool** — orthogonal to Claude Code, Cursor, Cline, Aider, Copilot, etc.
+- **IDE or editor** — the index is plain text
+- **Build system, language, or framework** — the protocol is stack-agnostic
 
-## Usage
+You can use AOCI with whatever stack you already have. The index file goes anywhere a text file can go.
+
+---
+
+## ⚙️ Usage
 
 ### Generate an index
 
-Pass the protocol specification (below) and your repository to any frontier LLM. Recommended models: Claude Sonnet 4.6, GPT-5, Gemini 2.5 Pro.
-
-Prompt template:
+Pass the protocol specification (below) and your repository to any frontier LLM. Prompt template:
 
 ```
 You are generating an AOCI index for a code repository.
@@ -63,29 +70,58 @@ Repository file tree:
 [paste output of `tree` or `git ls-files`]
 
 Key file contents:
-[paste source of high-importance files identified from the tree]
+[paste source of high-importance files]
 
-Output: a single AOCI.md file. One entry per source file and per
+Output: a single AOCI index. One entry per source file and per
 database table. Follow the encoding rules strictly. Allocate the
-S field to information that cannot be inferred from the file's
-syntax alone.
+S field to information that cannot be inferred from syntax alone.
 ```
 
-Save the output as `AOCI.md` at the repository root.
+Save the output anywhere — `AOCI.md`, `aoci.txt`, `index.aoci`, or hosted on the [aoci.ai](https://aoci.ai) platform. The protocol does not mandate a filename or storage location.
 
 ### Use the index in coding sessions
 
-Inject `AOCI.md` into the LLM context window at session start, prior to any task description. The LLM will resolve file localization, dependency chains, and architectural constraints from the index rather than through tool-based exploration.
+Inject the index content into the LLM context window at session start, prior to any task description. The LLM resolves file localization, dependency chains, and architectural constraints from the index rather than through tool-based exploration.
 
 ### Maintain incrementally
 
 Per-file independence permits *O(1)* updates per changed file. When file `X` is modified, regenerate only the entry for `X`; entries for unchanged files remain valid because the `R` field references files by name rather than by version-pinned interface.
 
-### Automated platform
+---
 
-Manual generation, consistency validation, and version management are operationally feasible but tedious. The [aoci.ai](https://aoci.ai) platform automates index generation, drift detection, and incremental updates.
+## 🛠 Platform — aoci.ai
 
-## Protocol
+Manual generation, drift detection, and version management are operationally feasible but tedious for production codebases. The [**aoci.ai**](https://aoci.ai) platform automates the protocol end-to-end:
+
+- **Bring your own model** — plug in any LLM endpoint (OpenAI-compatible, Anthropic, Gemini, self-hosted, or custom proxies). The platform does not lock to any vendor.
+- **Custom protocol configuration** — define your project's A/B/D dictionaries and token budgets through the UI; the platform enforces them across all generated entries.
+- **GitHub sync** — connect a repo, get an index automatically; subsequent commits trigger incremental updates.
+- **Drift detection** — flags entries inconsistent with current source.
+- **Version history** — every index generation is versioned and diffable.
+
+The platform is one implementation of the AOCI protocol. The protocol itself remains open and tool-independent — anyone can build alternative implementations.
+
+---
+
+## 🏛 Reference implementations
+
+Production systems built and continuously maintained under AOCI-driven development:
+
+| System | Stack | Scale | Verification |
+|---|---|---|---|
+| AI Practice Platform | Node.js + React | ~148K LOC | SonarQube 2A · 0 bugs / 0 vulnerabilities · 539 tests passing |
+| AI Education Platform | Go + Gin + Vue 3 | ~82K LOC | SonarQube 4A · 595 tests passing · 14,085 QPS stress · 12 security pen-checks passed |
+| TE-DNA 2.0 | Go + React + TypeScript | ~56K LOC | SonarQube 4A · production deployment |
+| LegalMind | Go + React 19 + TypeScript | ~42K LOC | SonarQube 4A |
+| AI Hedge Fund Pro | Go + React + TypeScript | ~39K LOC | SonarQube 4A |
+
+SonarQube 4A = A-grade across all four dimensions: Reliability, Security, Maintainability, Coverage.
+
+These are not toy demonstrations. They are production systems serving real users (over 100,000 registered on AI Education Platform), with eight-month deployment histories and zero AOCI-attributable defects across all benchmarked development tasks.
+
+---
+
+## 📐 Protocol
 
 ### Per-file entry
 
@@ -95,9 +131,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 
 The bracketed substring encodes the **discrete tag layer**. The colon-delimited remainder encodes the **continuous semantic layer** with four elements separated by `|`.
 
-#### Tag layer
-
-Five orthogonal dimensions:
+#### Tag layer — five orthogonal dimensions
 
 | Dim | Meaning | Encoding |
 |---|---|---|
@@ -111,9 +145,7 @@ Example: `WA9JM` denotes a Middleware-tier file in the Auth module of importance
 
 The `A`, `B`, `D` dictionaries are project-specific and declared in the index header.
 
-#### Semantic layer
-
-Four elements after the colon:
+#### Semantic layer — four elements
 
 | Element | Content |
 |---|---|
@@ -122,7 +154,7 @@ Four elements after the colon:
 | `A` | Exposed APIs or endpoints. `-` if none. |
 | `S` | High-entropy design decisions: fallback logic, transactional boundaries, encryption schemes, counter-intuitive contracts, runtime invariants. Information not inferable from syntax alone. |
 
-The `S` field carries the most evaluation-validated information density. Ablation studies show its removal reduces overall accuracy by 20.07pp (the largest single-component degradation). Treat `S` as the primary content vehicle.
+Treat `S` as the primary content vehicle — it carries the highest information density per token in the protocol.
 
 ### Database table entry
 
@@ -171,7 +203,9 @@ The index begins with a project-specific header that declares dimension dictiona
 
 Each entry depends only on its source file. Inter-entry references occur exclusively through filename mentions in the `R` field; no entry embeds content from another. This permits incremental regeneration with cost proportional to the change set rather than total repository size.
 
-## Citation
+---
+
+## 📚 Citation
 
 ```bibtex
 @misc{aoci2026,
@@ -184,6 +218,6 @@ Each entry depends only on its source file. Inter-entry references occur exclusi
 }
 ```
 
-## License
+## 📜 License
 
 This specification is released under the license in [LICENSE](LICENSE).
