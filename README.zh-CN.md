@@ -1,18 +1,23 @@
 # AOCI
 
+[![Spec Version](https://img.shields.io/badge/spec-v1.0-blue)](https://github.com/aoci-spec/aoci)
+[![License](https://img.shields.io/badge/license-CC0-green)](LICENSE)
+[![Paper](https://img.shields.io/badge/paper-arXiv-b31b1b)](https://arxiv.org/abs/2605.02421)
+[![Platform](https://img.shields.io/badge/platform-aoci.ai-purple)](https://aoci.ai)
+
 > **AI-Oriented Code Indexing**（面向 AI 的代码索引）—— 一个把仓库级代码压缩为单一结构化文本工件的协议，LLM 可一次读完。
 
-🌐 **语言**：[English](README.md) | 中文
-
-[平台](https://aoci.ai) · [论文 (arXiv)](https://arxiv.org/abs/2605.02421) · [复现包 (Zenodo)](https://doi.org/10.5281/zenodo.19677251)
+🌐 **语言**：[English](README.md) · 中文
 
 ---
 
-## 概述
+## 📖 概述
 
 AOCI 索引是一个纯文本工件，通过每个源文件或数据库表对应一个结构化条目，表达整个仓库。每个条目结合一个离散标签（架构坐标）和一段连续语义描述（功能、关系、接口、设计约束）。
 
 该协议针对 LLM 辅助软件工程中的一个具体失效模式：长、低熵上下文中的推理退化。AOCI 通过在任务开始之前将文件级信息按固定 schema 重新组织，使 LLM 无需运行时探索即可定位、理解、修改代码。
+
+**约 10 万行 LOC 的仓库通常压缩为 600–800 行索引——token 压缩比约 1:100。**
 
 一个典型条目：
 
@@ -32,26 +37,28 @@ uuid/username/email unique, password_hash bcrypt,
 status, is_superadmin, preferences JSONB
 ```
 
-10 万行级别的仓库通常压缩为 200–400 个条目——LLM 可单次前向传播读完。
+方法学、评估结果与理论分析见[论文](https://arxiv.org/abs/2605.02421)。
 
-## 实证结果
+---
 
-在 5 个生产系统的 19 个端到端开发任务，以及 4 个项目 × 3 个前沿 LLM × 6 种上下文条件（共 2,160 次评估）的基准上：
+## 🔓 不依赖任何工具链
 
-- AOCI **最终零缺陷** vs 三个 agent 工具 (Claude Code、Cursor、OpenCode) 共 **39 个缺陷**；Fisher 精确检验 *p* < 0.001
-- Token 消耗低 **4–130 倍**；比率随任务复杂度上升
-- 文件定位准确率 **97.67%**，仅比 Oracle 上限低 0.66 个百分点
-- 确定性：相同输入跨次产出相同结果
+AOCI **仅是一种格式规范**。它不依赖于任何特定：
 
-方法学与完整结果见 [arXiv:2605.02421](https://arxiv.org/abs/2605.02421)。复现工件见 [Zenodo](https://doi.org/10.5281/zenodo.19677251)。
+- **LLM 模型** — 任何具备结构化生成能力的模型均可
+- **Agent 工具** — 与 Claude Code、Cursor、Cline、Aider、Copilot 等正交
+- **IDE 或编辑器** — 索引就是纯文本
+- **构建系统、语言、框架** — 协议技术栈无关
 
-## 使用
+你可以在任何已有的技术栈上使用 AOCI。索引文件可以放在任何能存放文本文件的地方。
+
+---
+
+## ⚙️ 使用
 
 ### 生成索引
 
-将下方协议规范与你的仓库一并交给任意前沿 LLM。推荐模型：Claude Sonnet 4.6、GPT-5、Gemini 2.5 Pro。
-
-提示词模板：
+将下方协议规范与你的仓库一并交给任意前沿 LLM。提示词模板：
 
 ```
 你正在为一个代码仓库生成 AOCI 索引。
@@ -63,27 +70,57 @@ status, is_superadmin, preferences JSONB
 [粘贴 `tree` 或 `git ls-files` 的输出]
 
 关键文件内容：
-[粘贴文件树中识别出的高重要性文件源码]
+[粘贴高重要性文件的源码]
 
-输出：一份 AOCI.md 文件。每个源文件和数据库表对应一个条目。
-严格遵循编码规则。S 字段用于承载无法从文件语法本身推断的信息。
+输出：一份 AOCI 索引。每个源文件和数据库表对应一个条目。
+严格遵循编码规则。S 字段用于承载无法从语法本身推断的信息。
 ```
 
-将输出保存为仓库根目录下的 `AOCI.md`。
+输出可保存为任意位置——`AOCI.md`、`aoci.txt`、`index.aoci`，或托管在 [aoci.ai](https://aoci.ai) 平台。协议不强制规定文件名或存储位置。
 
 ### 在编程会话中使用
 
-会话开始时、任务描述之前，将 `AOCI.md` 注入 LLM 上下文窗口。LLM 通过索引而非工具探索完成文件定位、依赖追踪、架构约束的解析。
+会话开始时、任务描述之前，将索引内容注入 LLM 上下文窗口。LLM 通过索引而非工具探索完成文件定位、依赖追踪、架构约束的解析。
 
 ### 增量维护
 
 文件级独立性允许每次变更以 *O(1)* 成本更新单个条目。当文件 `X` 被修改时，仅重新生成 `X` 的条目；其他文件的条目仍然有效，因为 `R` 字段使用文件名引用而非版本固定的接口。
 
-### 自动化平台
+---
 
-手工生成、一致性校验、版本管理在工程上可行但繁琐。[aoci.ai](https://aoci.ai) 平台自动化处理索引生成、漂移检测、增量更新。
+## 🛠 平台 — aoci.ai
 
-## 协议
+手工生成、漂移检测、版本管理在工程上可行，但对生产级代码库而言繁琐。[**aoci.ai**](https://aoci.ai) 平台端到端自动化协议执行：
+
+- **自带模型** — 可接入任何 LLM 端点 (OpenAI 兼容、Anthropic、Gemini、自托管、自定义代理)。平台不绑定任何厂商。
+- **自定义协议配置** — 通过界面定义你项目的 A/B/D 字典和 token 预算；平台在所有生成条目上强制执行。
+- **GitHub 同步** — 连接仓库即自动生成索引；后续 commit 触发增量更新。
+- **漂移检测** — 标记与当前源码不一致的条目。
+- **版本历史** — 每次索引生成均版本化、可 diff。
+
+平台是 AOCI 协议的一种实现。协议本身保持开放、工具无关——任何人均可构建替代实现。
+
+---
+
+## 🏛 参考实现
+
+在 AOCI 驱动开发模式下构建并持续维护的生产系统：
+
+| 系统 | 技术栈 | 规模 | 验证 |
+|---|---|---|---|
+| AI Practice Platform | Node.js + React | ~148K LOC | SonarQube 2A · 0 bugs / 0 漏洞 · 539 测试通过 |
+| AI Education Platform | Go + Gin + Vue 3 | ~82K LOC | SonarQube 4A · 595 测试通过 · 14,085 QPS 压测 · 12 项安全渗透测试通过 |
+| TE-DNA 2.0 | Go + React + TypeScript | ~56K LOC | SonarQube 4A · 生产部署 |
+| LegalMind | Go + React 19 + TypeScript | ~42K LOC | SonarQube 4A |
+| AI Hedge Fund Pro | Go + React + TypeScript | ~39K LOC | SonarQube 4A |
+
+SonarQube 4A = 四个核心维度（可靠性、安全性、可维护性、覆盖率）均为 A 级。
+
+这些不是 demo 项目，而是服务真实用户的生产系统（AI Education Platform 注册用户超过 10 万），具有八个月以上的部署历史，在所有 benchmark 任务中 AOCI 引入零缺陷。
+
+---
+
+## 📐 协议
 
 ### 文件级条目
 
@@ -93,9 +130,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 
 方括号内编码**离散标签层**。冒号后编码**连续语义层**，四个元素用 `|` 分隔。
 
-#### 标签层
-
-五个正交维度：
+#### 标签层 — 五个正交维度
 
 | 维度 | 含义 | 编码 |
 |---|---|---|
@@ -109,9 +144,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 
 `A`、`B`、`D` 字典由项目自定义，在索引头部声明。
 
-#### 语义层
-
-冒号后的四个元素：
+#### 语义层 — 四个元素
 
 | 元素 | 内容 |
 |---|---|
@@ -120,7 +153,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 | `A` | 暴露的 API 或端点；无则填 `-` |
 | `S` | 高熵设计决策：降级逻辑、事务边界、加密方案、反直觉契约、运行时不变式。无法从语法本身推断的信息。 |
 
-`S` 字段是经实证验证信息密度最高的字段。消融实验显示移除 S 会使整体准确率下降 20.07 个百分点（单组件最大降幅）。S 应作为主要内容载体。
+`S` 应作为主要内容载体——它在协议中承载每 token 信息密度最高的内容。
 
 ### 数据库表条目
 
@@ -169,7 +202,9 @@ table_name[domain-table_type-scale_estimate-features]: 字段级描述
 
 每个条目仅依赖其源文件。条目间引用仅通过 `R` 字段中的文件名提及实现；条目不内嵌其他条目的内容。这允许增量重新生成的成本与变更集而非仓库总大小成正比。
 
-## 引用
+---
+
+## 📚 引用
 
 ```bibtex
 @misc{aoci2026,
@@ -182,6 +217,6 @@ table_name[domain-table_type-scale_estimate-features]: 字段级描述
 }
 ```
 
-## 许可
+## 📜 许可
 
 本规范以 [LICENSE](LICENSE) 文件中的许可发布。
