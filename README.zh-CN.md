@@ -1,13 +1,19 @@
+<div align="center">
+
 # AOCI
 
-[![Spec Version](https://img.shields.io/badge/spec-v1.0-blue)](https://github.com/aoci-spec/aoci)
-[![License](https://img.shields.io/badge/license-CC0-green)](LICENSE)
-[![Paper](https://img.shields.io/badge/paper-arXiv-b31b1b)](https://arxiv.org/abs/2605.02421)
-[![Platform](https://img.shields.io/badge/platform-aoci.ai-purple)](https://aoci.ai)
+### AI-Oriented Code Indexing（面向 AI 的代码索引）
 
-> **AI-Oriented Code Indexing**（面向 AI 的代码索引）—— 一个把仓库级代码压缩为单一结构化文本工件的协议，LLM 可一次读完。
+**一个把仓库级代码压缩为单一结构化文本工件的协议，LLM 可一次读完。**
 
-🌐 **语言**：[English](README.md) · 中文
+[![Spec Version](https://img.shields.io/badge/spec-v1.0-blue.svg?style=flat-square)](https://github.com/aoci-spec/aoci)
+[![License](https://img.shields.io/badge/license-pending-lightgrey.svg?style=flat-square)](NOTICE.md)
+[![Paper](https://img.shields.io/badge/paper-arXiv-b31b1b.svg?style=flat-square)](https://arxiv.org/abs/2605.02421)
+[![Platform](https://img.shields.io/badge/platform-aoci.ai-7B3FE4.svg?style=flat-square)](https://aoci.ai)
+
+[**平台**](https://aoci.ai) · [**论文 (arXiv)**](https://arxiv.org/abs/2605.02421) · [**English**](README.md)
+
+</div>
 
 ---
 
@@ -17,7 +23,7 @@ AOCI 索引是一个纯文本工件，通过每个源文件或数据库表对应
 
 该协议针对 LLM 辅助软件工程中的一个具体失效模式：长、低熵上下文中的推理退化。AOCI 通过在任务开始之前将文件级信息按固定 schema 重新组织，使 LLM 无需运行时探索即可定位、理解、修改代码。
 
-**约 10 万行 LOC 的仓库通常压缩为 600–800 行索引——token 压缩比约 1:100。**
+> 约 **10 万行 LOC** 的仓库通常压缩为 **600–800 行索引** —— token 压缩比约 **1:100**。
 
 一个典型条目：
 
@@ -37,7 +43,29 @@ uuid/username/email unique, password_hash bcrypt,
 status, is_superadmin, preferences JSONB
 ```
 
-方法学、评估结果与理论分析见[论文](https://arxiv.org/abs/2605.02421)。
+方法学、评估与理论分析见[论文](https://arxiv.org/abs/2605.02421)。
+
+---
+
+## 🚀 AOCI 能做什么
+
+AOCI 支持两种互补的开发模式——均经过生产系统验证。
+
+### 模式一 — 索引优先开发（绿地项目）
+
+> *先写索引、再从索引生成代码，构建全新系统。*
+
+开发者用自然语言描述需求；LLM 生成完整的 AOCI 索引作为架构蓝图；代码在每个条目的约束下逐文件生成。架构在**索引层级（数百行）**就被审阅——*先于*任何代码生成。
+
+**已验证能力**：端到端构建**约 20 万行 LOC** 量级的生产系统，覆盖 Node.js + React、Go + Gin + Vue 3、Go + React 19 + TypeScript 等技术栈，在持续部署条件下达到 **SonarQube 四 A 标准**（可靠性 · 安全性 · 可维护性 · 覆盖率）。
+
+### 模式二 — 已有仓库的迭代开发（棕地项目）
+
+> *把已有代码仓库压缩成索引，然后持续基于索引迭代。*
+
+LLM 读取已有仓库并生成 AOCI 索引。索引成为后续所有功能新增、重构、bug 修复的工作蓝图。每次变更**先**更新索引、再传播到代码——使架构图与实现持续保持对齐。
+
+**已验证能力**：在 10 万+ LOC 量级的生产系统上进行 8 个月以上持续迭代开发，索引作为每个开发任务唯一的架构事实来源。
 
 ---
 
@@ -47,10 +75,11 @@ AOCI **仅是一种格式规范**。它不依赖于任何特定：
 
 - **LLM 模型** — 任何具备结构化生成能力的模型均可
 - **Agent 工具** — 与 Claude Code、Cursor、Cline、Aider、Copilot 等正交
-- **IDE 或编辑器** — 索引就是纯文本
-- **构建系统、语言、框架** — 协议技术栈无关
+- **IDE 或编辑器** — 索引就是纯文本，在哪都能编辑
+- **构建系统、语言、框架** — 协议设计上技术栈无关
+- **开发者背景** — 专业工程师或非传统编程背景的领域专家均可使用
 
-你可以在任何已有的技术栈上使用 AOCI。索引文件可以放在任何能存放文本文件的地方。
+索引文件可以放在任何能存放文本文件的地方。
 
 ---
 
@@ -92,11 +121,13 @@ AOCI **仅是一种格式规范**。它不依赖于任何特定：
 
 手工生成、漂移检测、版本管理在工程上可行，但对生产级代码库而言繁琐。[**aoci.ai**](https://aoci.ai) 平台端到端自动化协议执行：
 
-- **自带模型** — 可接入任何 LLM 端点 (OpenAI 兼容、Anthropic、Gemini、自托管、自定义代理)。平台不绑定任何厂商。
-- **自定义协议配置** — 通过界面定义你项目的 A/B/D 字典和 token 预算；平台在所有生成条目上强制执行。
-- **GitHub 同步** — 连接仓库即自动生成索引；后续 commit 触发增量更新。
-- **漂移检测** — 标记与当前源码不一致的条目。
-- **版本历史** — 每次索引生成均版本化、可 diff。
+| 功能 | 说明 |
+|---|---|
+| 🔌 **自带模型** | 可接入任何 LLM 端点 (OpenAI 兼容、Anthropic、Gemini、自托管、自定义代理)。不绑定任何厂商。 |
+| ⚙️ **自定义协议配置** | 通过界面定义你项目的 A/B/D 字典和 token 预算；平台在所有条目上强制执行。 |
+| 🔄 **GitHub 同步** | 连接仓库即自动生成索引；后续 commit 触发增量更新。 |
+| 📊 **漂移检测** | 标记与当前源码不一致的条目。 |
+| 📚 **版本历史** | 每次索引生成均版本化、可 diff。 |
 
 平台是 AOCI 协议的一种实现。协议本身保持开放、工具无关——任何人均可构建替代实现。
 
@@ -109,14 +140,14 @@ AOCI **仅是一种格式规范**。它不依赖于任何特定：
 | 系统 | 技术栈 | 规模 | 验证 |
 |---|---|---|---|
 | AI Practice Platform | Node.js + React | ~148K LOC | SonarQube 2A · 0 bugs / 0 漏洞 · 539 测试通过 |
-| AI Education Platform | Go + Gin + Vue 3 | ~82K LOC | SonarQube 4A · 595 测试通过 · 14,085 QPS 压测 · 12 项安全渗透测试通过 |
+| AI Education Platform | Go + Gin + Vue 3 | ~82K LOC | SonarQube 4A · 595 测试通过 · 14,085 QPS 压测 · 12 项安全渗透测试通过 · 10 万+ 注册用户 |
 | TE-DNA 2.0 | Go + React + TypeScript | ~56K LOC | SonarQube 4A · 生产部署 |
 | LegalMind | Go + React 19 + TypeScript | ~42K LOC | SonarQube 4A |
 | AI Hedge Fund Pro | Go + React + TypeScript | ~39K LOC | SonarQube 4A |
 
-SonarQube 4A = 四个核心维度（可靠性、安全性、可维护性、覆盖率）均为 A 级。
+> SonarQube 4A = 四个核心维度（**可靠性、安全性、可维护性、覆盖率**）均为 A 级。
 
-这些不是 demo 项目，而是服务真实用户的生产系统（AI Education Platform 注册用户超过 10 万），具有八个月以上的部署历史，在所有 benchmark 任务中 AOCI 引入零缺陷。
+这些不是 demo 项目，而是服务真实用户的生产系统，具有八个月以上的部署历史，在所有 benchmark 任务中 AOCI 引入零缺陷。
 
 ---
 
@@ -140,7 +171,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 | `D` | 技术特征（可选） | 单字符串联（例如 J=JWT、R=RBAC、T=Tx、C=Crypto） |
 | `E` | 代码规模 | 取值于 {S, M, L, XL}——按行数分档 |
 
-示例：`WA9JM` 表示 Middleware 层级、Auth 模块、重要性 9、含 JWT 特征、中等规模的文件。
+> 示例：`WA9JM` 表示 Middleware 层级、Auth 模块、重要性 9、含 JWT 特征、中等规模的文件。
 
 `A`、`B`、`D` 字典由项目自定义，在索引头部声明。
 
@@ -153,7 +184,7 @@ filename[ABCDE-tag]: F:function | R:relations | A:API | S:synopsis
 | `A` | 暴露的 API 或端点；无则填 `-` |
 | `S` | 高熵设计决策：降级逻辑、事务边界、加密方案、反直觉契约、运行时不变式。无法从语法本身推断的信息。 |
 
-`S` 应作为主要内容载体——它在协议中承载每 token 信息密度最高的内容。
+> `S` 应作为主要内容载体——它在协议中承载每 token 信息密度最高的内容。
 
 ### 数据库表条目
 
@@ -168,7 +199,7 @@ table_name[domain-table_type-scale_estimate-features]: 字段级描述
 - `scale_estimate` — 预期行数：S、M、L、XL
 - `features` — 串联的属性标记（GUID、JSONB、UNIQ、SOFT、FK 等）
 
-示例：`users[U-M-M-GUID]` 解码为用户域主表，中等规模，使用 GUID 标识符。
+> 示例：`users[U-M-M-GUID]` 解码为用户域主表，中等规模，使用 GUID 标识符。
 
 冒号后是逗号分隔的字段级描述：列语义、约束、编码选择。
 
@@ -217,6 +248,16 @@ table_name[domain-table_type-scale_estimate-features]: 字段级描述
 }
 ```
 
-## 📜 许可
+---
 
-本规范以 [LICENSE](LICENSE) 文件中的许可发布。
+## 📜 许可与专利
+
+AOCI 协议规范当前**保留所有权利**。正式许可正在准备中——当前条款见 [NOTICE.md](NOTICE.md)。
+
+AOCI 协议本身受**已申请专利**保护，专利已向中华人民共和国国家知识产权局提交。商业实施可能需要专利许可——咨询请访问 [aoci.ai/license](https://aoci.ai/license)。
+
+---
+
+<div align="center">
+<sub>使用 AOCI 协议构建 · 由 AOCI 社区维护</sub>
+</div>
